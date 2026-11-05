@@ -301,6 +301,34 @@ with onglet_records:
         },
     )
 
-# ---------------------------------------------------------------- Données
-st.write(f"{len(filtre)} relevés pour cette sélection.")
-st.dataframe(filtre, hide_index=True)
+# ---------------------------------------------------------------- Conclusion
+st.divider()
+st.subheader("Conclusion")
+st.markdown(
+    "La consommation suit **les heures de courant**, pas la chaleur. Dans les quartiers résidentiels, "
+    "la consommation par abonné a une corrélation de **0.76** avec les heures de courant, contre "
+    "**-0.15** seulement avec la température, et Cap-Haïtien, où le courant manque le plus (10.0 heures "
+    "par jour en médiane), est aussi la commune où les ménages consomment le moins (70.8 kWh par abonné "
+    "et par mois). Une corrélation montre que deux mesures varient ensemble, mais elle ne prouve pas que "
+    "l'une cause l'autre : d'autres facteurs, comme les revenus, les équipements ou les tarifs, peuvent "
+    "jouer, et ces relevés ne couvrent que 24 mois."
+)
+
+with st.expander(f"Voir les données filtrées ({len(filtre)} relevés)"):
+    st.dataframe(
+        filtre,
+        hide_index=True,
+        column_config={
+            "mois": "Mois",
+            "quartier": "Quartier",
+            "kwh": st.column_config.NumberColumn("kWh", format="%d"),
+            "heures_courant": st.column_config.NumberColumn("Heures de courant", format="%.1f"),
+            "commune": "Commune",
+            "type": "Type",
+            "abonnes": "Abonnés",
+            "kwh_par_abonne": st.column_config.NumberColumn("kWh par abonné", format="%.1f"),
+            "annee": st.column_config.NumberColumn("Année", format="%d"),
+            "temperature_c": st.column_config.NumberColumn("Température (°C)", format="%.1f"),
+            "pluie_mm": st.column_config.NumberColumn("Pluie (mm)", format="%d"),
+        },
+    )
