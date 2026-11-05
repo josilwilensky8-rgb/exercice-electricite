@@ -38,6 +38,26 @@ if not choix_communes:
 communes_choisies = df[df["commune"].isin(choix_communes)]
 filtre = communes_choisies[communes_choisies["annee"] == annee]
 
+# ---------------------------------------------------------------- Indicateurs
+annee_precedente = communes_choisies[communes_choisies["annee"] == annee - 1]
+total = filtre["kwh"].sum()
+par_abonne = filtre["kwh_par_abonne"].mean()
+heures = filtre["heures_courant"].mean()
+
+if annee_precedente.empty:
+    deltas = [None, None, None]
+else:
+    deltas = [
+        f"{(total / annee_precedente['kwh'].sum() - 1) * 100:+.1f} % sur un an",
+        f"{(par_abonne / annee_precedente['kwh_par_abonne'].mean() - 1) * 100:+.1f} % sur un an",
+        f"{heures - annee_precedente['heures_courant'].mean():+.1f} h sur un an",
+    ]
+
+col1, col2, col3 = st.columns(3)
+col1.metric("Consommation totale (millions de kWh)", f"{total / 1_000_000:.2f}", deltas[0], border=True)
+col2.metric("Consommation par abonné (kWh par mois)", f"{par_abonne:.1f}", deltas[1], border=True)
+col3.metric("Courant disponible (heures par jour)", f"{heures:.1f}", deltas[2], border=True)
+
 # ---------------------------------------------------------------- Données
 st.write(f"{len(filtre)} relevés pour cette sélection.")
 st.dataframe(filtre, hide_index=True)
