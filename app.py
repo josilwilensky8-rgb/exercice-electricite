@@ -24,5 +24,20 @@ st.markdown(
     "chaleur, ou les heures de courant**."
 )
 
-st.write(f"Le fichier propre compte {len(df)} relevés.")
-st.dataframe(df.head(10), hide_index=True)
+# ---------------------------------------------------------------- Filtres
+st.sidebar.header("Filtres")
+communes = sorted(df["commune"].unique())
+choix_communes = st.sidebar.multiselect("Communes", communes, default=communes)
+annees = sorted(df["annee"].unique().tolist())
+annee = st.sidebar.selectbox("Année", annees, index=annees.index(2025))
+
+if not choix_communes:
+    st.warning("Choisissez au moins une commune dans la barre latérale.")
+    st.stop()
+
+communes_choisies = df[df["commune"].isin(choix_communes)]
+filtre = communes_choisies[communes_choisies["annee"] == annee]
+
+# ---------------------------------------------------------------- Données
+st.write(f"{len(filtre)} relevés pour cette sélection.")
+st.dataframe(filtre, hide_index=True)
