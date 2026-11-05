@@ -8,6 +8,7 @@ DOSSIER = Path(__file__).parent / "donnees"
 
 ROUGE = "#A71E36"
 GRIS = "#898781"
+TEXTE = "#2B2B2B"
 COULEURS_COMMUNES = {
     "Cap-Haïtien": "#2a78d6",
     "Delmas": "#eb6834",
@@ -19,7 +20,7 @@ COULEURS_TYPES = {"Commercial": ROUGE, "Résidentiel": GRIS}
 st.set_page_config(page_title="L'électricité dans 12 quartiers", page_icon="⚡", layout="wide")
 
 st.title("L'électricité dans 12 quartiers")
-st.caption("Relevés mensuels de janvier 2024 à décembre 2025. Données fictives.")
+st.markdown(":small[:gray[Relevés mensuels de janvier 2024 à décembre 2025. Données fictives.]]")
 
 
 @st.cache_data
@@ -41,6 +42,15 @@ def echelle(couleurs, valeurs):
     """Chaque commune (ou type) garde toujours la même couleur, même filtrée."""
     presentes = [nom for nom in couleurs if nom in set(valeurs)]
     return alt.Scale(domain=presentes, range=[couleurs[nom] for nom in presentes])
+
+
+def lisible(graphique):
+    """Textes des graphiques plus grands et plus foncés, faciles à lire pour tout le monde."""
+    return (
+        graphique.configure_axis(labelFontSize=14, titleFontSize=15, labelColor=TEXTE, titleColor=TEXTE)
+        .configure_legend(labelFontSize=15, labelColor=TEXTE, symbolSize=150)
+        .configure_title(fontSize=16, color=TEXTE)
+    )
 
 
 df = charger_donnees()
@@ -81,9 +91,9 @@ else:
     ]
 
 col1, col2, col3 = st.columns(3)
-col1.metric("Consommation totale (millions de kWh)", f"{total / 1_000_000:.2f}", deltas[0], border=True)
-col2.metric("Consommation par abonné (kWh par mois)", f"{par_abonne:.1f}", deltas[1], border=True)
-col3.metric("Courant disponible (heures par jour)", f"{heures:.1f}", deltas[2], border=True)
+col1.metric("Millions de kWh consommés", f"{total / 1_000_000:.2f}", deltas[0], border=True)
+col2.metric("kWh par abonné et par mois", f"{par_abonne:.1f}", deltas[1], border=True)
+col3.metric("Heures de courant par jour", f"{heures:.1f}", deltas[2], border=True)
 
 # ---------------------------------------------------------------- Onglets
 onglet_abonne, onglet_evolution, onglet_correlation, onglet_coupures, onglet_records = st.tabs(
@@ -101,7 +111,7 @@ with onglet_abonne:
     ordre = classement.sort_values("kwh_par_abonne", ascending=False)["quartier"].tolist()
     base = alt.Chart(classement).encode(
         x=alt.X("kwh_par_abonne:Q", title="kWh par abonné et par mois (moyenne)", axis=alt.Axis(tickCount=6)),
-        y=alt.Y("quartier:N", sort=ordre, title=None),
+        y=alt.Y("quartier:N", sort=ordre, title=None, axis=alt.Axis(labelLimit=260)),
     )
     barres = base.mark_bar(cornerRadiusEnd=4).encode(
         color=alt.Color("type:N", scale=echelle(COULEURS_TYPES, classement["type"]),
@@ -112,13 +122,13 @@ with onglet_abonne:
             alt.Tooltip("kwh_par_abonne:Q", title="kWh par abonné", format=".1f"),
         ],
     )
-    valeurs = base.mark_text(align="left", dx=5, color="#52514e").encode(
+    valeurs = base.mark_text(align="left", dx=6, fontSize=14, color=TEXTE).encode(
         text=alt.Text("kwh_par_abonne:Q", format=".0f")
     )
-    st.altair_chart((barres + valeurs).properties(height=alt.Step(30)))
+    st.altair_chart(lisible((barres + valeurs).properties(height=alt.Step(34))))
 
 with onglet_evolution:
-    st.caption("Cet onglet compare les deux années : seul le filtre des communes s'applique.")
+    st.markdown(":small[:gray[Cet onglet compare les deux années : seul le filtre des communes s'applique.]]")
     debut, fin = annees[0], annees[-1]
     totaux = communes_choisies.pivot_table(index="commune", columns="annee", values="kwh", aggfunc="sum")
     totaux["hausse"] = (totaux[fin] - totaux[debut]) / totaux[debut] * 100
@@ -157,14 +167,15 @@ with onglet_evolution:
         )
         .properties(height=380)
     )
-    st.altair_chart(courbes)
+    st.altair_chart(lisible(courbes))
 
     tableau = totaux[[debut, fin]] / 1e6
     tableau.columns = [f"{debut} (millions de kWh)", f"{fin} (millions de kWh)"]
     tableau["Hausse (%)"] = totaux["hausse"]
-    tableau.index.name = "Commune"
+    tableau = tableau.rename_axis("Commune").reset_index()
     st.dataframe(
         tableau,
+        hide_index=True,
         column_config={
             f"{debut} (millions de kWh)": st.column_config.NumberColumn(format="%.2f"),
             f"{fin} (millions de kWh)": st.column_config.NumberColumn(format="%.2f"),
@@ -173,7 +184,7 @@ with onglet_evolution:
     )
 
 with onglet_correlation:
-    st.caption("Quartiers résidentiels, 2024 et 2025 : seul le filtre des communes s'applique.")
+    st.markdown(":small[:gray[Quartiers résidentiels, 2024 et 2025 : seul le filtre des communes s'applique.]]")
     residentiel = communes_choisies[communes_choisies["type"] == "Résidentiel"]
     corr_courant = residentiel["kwh_par_abonne"].corr(residentiel["heures_courant"])
     corr_chaleur = residentiel["kwh_par_abonne"].corr(residentiel["temperature_c"])
@@ -200,8 +211,8 @@ with onglet_correlation:
         )
 
     gauche, droite = st.columns(2)
-    gauche.altair_chart(nuage("heures_courant", "Heures de courant par jour", corr_courant))
-    droite.altair_chart(nuage("temperature_c", "Température moyenne (°C)", corr_chaleur))
+    gauche.altair_chart(lisible(nuage("heures_courant", "Heures de courant par jour", corr_courant)))
+    droite.altair_chart(lisible(nuage("temperature_c", "Température moyenne (°C)", corr_chaleur)))
 
 with onglet_coupures:
     coupures = filtre[filtre["heures_courant"] < 8].sort_values("mois")
@@ -248,8 +259,8 @@ with onglet_coupures:
         .mark_rule(color="#2b2b2b", strokeWidth=1.5)
         .encode(x=alt.X("seuil:Q", title="Heures de courant par jour"))
     )
-    gauche, droite = st.columns([2, 1])
-    gauche.altair_chart((histogramme + seuil).properties(height=340))
+    gauche, droite = st.columns([3, 2])
+    gauche.altair_chart(lisible((histogramme + seuil).properties(height=360)))
 
     quartiles = (
         filtre.groupby("commune")["heures_courant"]
@@ -259,10 +270,14 @@ with onglet_coupures:
         [["Médiane", "Q1", "Q3"]]
         .sort_values("Médiane")
     )
-    quartiles.index.name = "Commune"
+    quartiles = quartiles.rename_axis(index="Commune", columns=None).reset_index()
     droite.markdown("**Heures de courant par jour**")
-    droite.dataframe(quartiles, column_config={c: st.column_config.NumberColumn(format="%.1f") for c in quartiles})
-    droite.caption("Le trait noir du graphique marque le seuil de 8 heures.")
+    droite.dataframe(
+        quartiles,
+        hide_index=True,
+        column_config={c: st.column_config.NumberColumn(format="%.1f") for c in ["Médiane", "Q1", "Q3"]},
+    )
+    droite.markdown(":small[:gray[Le trait noir du graphique marque le seuil de 8 heures.]]")
 
 with onglet_records:
     records = filtre.nlargest(10, "kwh").copy()
@@ -276,7 +291,7 @@ with onglet_records:
     )
     base = alt.Chart(records).encode(
         x=alt.X("milliers_kwh:Q", title="Milliers de kWh sur le mois", axis=alt.Axis(tickCount=6)),
-        y=alt.Y("releve:N", sort=records["releve"].tolist(), title=None, axis=alt.Axis(labelLimit=240)),
+        y=alt.Y("releve:N", sort=records["releve"].tolist(), title=None, axis=alt.Axis(labelLimit=320)),
     )
     barres = base.mark_bar(cornerRadiusEnd=4).encode(
         color=alt.Color("type:N", scale=echelle(COULEURS_TYPES, records["type"]),
@@ -288,8 +303,8 @@ with onglet_records:
             alt.Tooltip("heures_courant:Q", title="Heures de courant", format=".1f"),
         ],
     )
-    valeurs = base.mark_text(align="left", dx=5, color="#52514e").encode(text="kwh_texte:N")
-    st.altair_chart((barres + valeurs).properties(height=alt.Step(30)))
+    valeurs = base.mark_text(align="left", dx=6, fontSize=14, color=TEXTE).encode(text="kwh_texte:N")
+    st.altair_chart(lisible((barres + valeurs).properties(height=alt.Step(34))))
     st.dataframe(
         records.head(3)[["mois", "quartier", "type", "kwh"]],
         hide_index=True,

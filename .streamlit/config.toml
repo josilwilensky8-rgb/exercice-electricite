@@ -3,3 +3,7 @@ primaryColor = "#A71E36"
 backgroundColor = "#FFFFFF"
 secondaryBackgroundColor = "#F7F3F3"
 textColor = "#2B2B2B"
+# Lisibilité : texte un peu plus grand, gris foncé au lieu de gris pâle
+baseFontSize = 18
+grayTextColor = "#4A4A4A"
+dataframeHeaderTextColor = "#2B2B2B"
